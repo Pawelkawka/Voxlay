@@ -34,7 +34,7 @@ To remove the application, run:
 voxlay remove
 ```
 
-- **API & Engines**
+## API & Engines
 
 - **Speech Recognition**: `SpeechRecognition` library.
 - **Translation**: 
