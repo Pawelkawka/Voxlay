@@ -34,12 +34,12 @@ To remove the application, run:
 voxlay remove
 ```
 
-## API & Engines
+- **API & Engines**
 
 - **Speech Recognition**: `SpeechRecognition` library.
 - **Translation**: 
-  - **LibreTranslate**: Open source, self hostable translation instance.
-  - **CTranslate2**: Fast inference engine for Transformer models (supports OPUS-MT models).
+  - **CTranslate2**: (Default) Fast inference engine for Transformer models (supports OPUS-MT models). Runs completely offline.
+  - **LibreTranslate**: (Beta) Support for LibreTranslate API. Useful for self-hosted instances.
 
 ---
 

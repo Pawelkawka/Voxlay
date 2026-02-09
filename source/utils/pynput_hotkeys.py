@@ -40,7 +40,12 @@ class PynputHotkeyManager:
 
     def _restart_listener(self):
         if self.listener:
-            self.listener.stop()
+            try:
+                self.listener.stop()
+                if self.listener.is_alive():
+                    self.listener.join(timeout=1.0)
+            except Exception as e:
+                logger.error(f"Error stopping listener: {e}")
             self.listener = None
             
         hotkey_map = {}

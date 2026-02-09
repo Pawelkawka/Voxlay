@@ -13,6 +13,11 @@ if [ "$EUID" -eq 0 ]; then
   exit 1
 fi
 
+if ! command -v unzip &> /dev/null; then
+    echo "Error: 'unzip' is required but not installed. Please install 'unzip' and try again."
+    exit 1
+fi
+
 mkdir -p "$BIN_DIR"
 mkdir -p "$DESKTOP_DIR"
 
