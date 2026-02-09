@@ -3,7 +3,7 @@ import os
 
 APP_NAME = "Voxlay"
 
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 
 DEFAULT_HOTKEY = 'ctrl+m'
 DEFAULT_COPY_HOTKEY = 'ctrl+shift+c'
@@ -34,7 +34,7 @@ DEFAULT_TARGET_LANGUAGE = "en"
 
 DEFAULT_RECOGNIZER_ENGINE = "speech_recognition"
 
-DEFAULT_TRANSLATOR_ENGINE = "libretranslate_local"
+DEFAULT_TRANSLATOR_ENGINE = "ctranslate2"
 DEFAULT_LIBRETRANSLATE_URL = "http://localhost:5000/translate"
 
 DEFAULT_INITIAL_SILENCE_TIMEOUT = 4.0
@@ -74,7 +74,7 @@ SOURCE_LANGUAGES = {
 }
 
 TRANSLATOR_ENGINES = {
-    "libretranslate_local": "LibreTranslate (Local)",
+    "libretranslate_local": "LibreTranslate (Local) [BETA - Experimental]",
     "ctranslate2": "CTranslate2 (Helsinki-NLP)"
 }
 

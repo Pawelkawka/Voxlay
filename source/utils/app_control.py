@@ -16,7 +16,7 @@ def restart_application():
         if not getattr(sys, 'frozen', False):
             cmd = [python] + args
         else:
-            cmd = args
+            cmd = [sys.executable] + sys.argv[1:]
 
         logger.info(f"Restart command: {cmd}")
         
