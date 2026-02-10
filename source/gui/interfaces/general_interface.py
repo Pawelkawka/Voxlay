@@ -11,6 +11,8 @@ from ..workers.model_installer import ModelInstallerThread
 from core.constants import DEFAULT_CONFIG_STRUCT, SOURCE_LANGUAGES, TARGET_LANGUAGES, TRANSLATOR_ENGINES, DEFAULT_CTRANSLATE2_MODEL_DIR
 import logging
 import threading
+import shutil
+from pathlib import Path
 
 logger = logging.getLogger("GUI.General")
 
@@ -156,6 +158,11 @@ class GeneralInterface(ScrollArea):
         engineGroup.addSettingCard(self.modelCard)
         
         layout.addWidget(engineGroup)
+
+        self.manageModelsTitle = TitleLabel("Manage Models")
+        layout.addWidget(self.manageModelsTitle)
+        self.manageModelsGroup = SettingCardGroup("", self.view)
+        layout.addWidget(self.manageModelsGroup)
         
         self.serverTitle = TitleLabel("Server Configuration")
         layout.addWidget(self.serverTitle)
@@ -212,6 +219,77 @@ class GeneralInterface(ScrollArea):
             self.modelCard.setEnabled(False)
         finally:
             self.modelCard.comboBox.blockSignals(False)
+            self._update_model_management_list()
+
+    def _update_model_management_list(self):
+        while self.manageModelsGroup.viewLayout.count():
+            item = self.manageModelsGroup.viewLayout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        from engines import ctranslate2_engine
+        try:
+            translator = ctranslate2_engine.get_translator(DEFAULT_CTRANSLATE2_MODEL_DIR)
+            models = translator.list_models()
+            
+            if not models:
+                self.manageModelsGroup.viewLayout.addWidget(QtWidgets.QLabel("No models installed."))
+            else:
+                for model_name in models:
+                    item_widget = QtWidgets.QWidget()
+                    item_layout = QtWidgets.QHBoxLayout(item_widget)
+                    item_layout.setContentsMargins(10, 5, 10, 5)
+                    
+                    name_label = QtWidgets.QLabel(model_name)
+                    item_layout.addWidget(name_label)
+                    item_layout.addStretch()
+                    
+                    del_btn = QtWidgets.QPushButton("Delete")
+                    del_btn.setFixedWidth(80)
+                    del_btn.setStyleSheet("background-color: #c42b1c; color: white;")
+                    del_btn.clicked.connect(lambda checked, m=model_name: self.delete_model(m))
+                    item_layout.addWidget(del_btn)
+                    
+                    self.manageModelsGroup.viewLayout.addWidget(item_widget)
+        except Exception as e:
+            logger.error(f"Error updating management list: {e}")
+
+    def delete_model(self, model_name):
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self.window(),
+            "Delete Model",
+            f"Are you sure you want to delete model '{model_name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                model_path = Path(DEFAULT_CTRANSLATE2_MODEL_DIR) / model_name
+                if model_path.exists():
+                    import shutil
+                    shutil.rmtree(model_path)
+                    InfoBar.success(
+                        title="Model Deleted",
+                        content=f"Model {model_name} has been removed.",
+                        orient=QtCore.Qt.Orientation.Horizontal,
+                        isClosable=True,
+                        position=InfoBarPosition.TOP_RIGHT,
+                        duration=3000,
+                        parent=self.window()
+                    )
+                    self.refresh_models()
+            except Exception as e:
+                logger.error(f"Error deleting model {model_name}: {e}")
+                InfoBar.error(
+                    title="Deletion Failed",
+                    content=f"Could not delete model: {e}",
+                    orient=QtCore.Qt.Orientation.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP_RIGHT,
+                    duration=3000,
+                    parent=self.window()
+                )
 
     def change_ctranslate2_model(self):
         idx = self.modelCard.comboBox.currentIndex()
@@ -321,6 +399,9 @@ class GeneralInterface(ScrollArea):
             self.sourceLangCardCTranslate2.setVisible(False)
             self.modelCard.setVisible(False)
             self.downloadModelCard.setVisible(False)
+            self.manageModelsTitle.setVisible(False)
+            self.manageModelsGroup.setVisible(False)
+            self.manageModelsGroup.setVisible(False)
             self.sourceLangCard = self.sourceLangCardLibreTranslate
         elif engine == "ctranslate2":
             self.serverTitle.setVisible(False)
@@ -330,6 +411,8 @@ class GeneralInterface(ScrollArea):
             self.sourceLangCardCTranslate2.setVisible(True)
             self.modelCard.setVisible(True)
             self.downloadModelCard.setVisible(True)
+            self.manageModelsTitle.setVisible(True)
+            self.manageModelsGroup.setVisible(True)
             self.sourceLangCard = self.sourceLangCardCTranslate2
             self.refresh_models()
         else:
@@ -340,6 +423,8 @@ class GeneralInterface(ScrollArea):
             self.sourceLangCardCTranslate2.setVisible(False)
             self.modelCard.setVisible(False)
             self.downloadModelCard.setVisible(False)
+            self.manageModelsTitle.setVisible(False)
+            self.manageModelsGroup.setVisible(False)
             self.sourceLangCard = self.sourceLangCardLibreTranslate
 
     def change_source_language_libretranslate(self):
@@ -399,6 +484,7 @@ class GeneralInterface(ScrollArea):
         self.serverCard.setValue(self.config.get("libretranslate_url", "http://localhost:5000/translate"))
 
     def show_download_dialog(self):
+        from engines import ctranslate2_engine
         current_source = self.config.get("source_language", "pl-PL")
         fixed_src = current_source.replace("_", "-").split("-")[0].lower().strip()
         
@@ -425,12 +511,31 @@ class GeneralInterface(ScrollArea):
                     )
                     return
 
+            translator = ctranslate2_engine.get_translator(DEFAULT_CTRANSLATE2_MODEL_DIR)
+            installed_models = translator.list_models()
+            safe_name = model_name.replace("/", "_")
+            legacy_name = model_name.split("/")[-1]
+            
+            if safe_name in installed_models or legacy_name in installed_models:
+                InfoBar.warning(
+                    title="Model Already Installed",
+                    content=f"The model '{model_name}' is already installed.",
+                    orient=QtCore.Qt.Orientation.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP_RIGHT,
+                    duration=3000,
+                    parent=self.window()
+                )
+                return
+
             logger.info(f"User requested download of model: {model_name}")
             self.start_model_download(model_name)
 
     def start_model_download(self, model_name):
         self.downloadModelCard.setEnabled(False)
-        self.downloadModelCard.setContent("Downloading and converting... This may take a while.")
+        self.modelCard.setEnabled(False)
+        self.downloadModelCard.setContent("Downloading... Please wait.")
+        self.downloadModelCard.button.setText("Downloading...")
         
         self.installer_thread = ModelInstallerThread(model_name, DEFAULT_CTRANSLATE2_MODEL_DIR)
         self.installer_thread.finished_signal.connect(self.on_download_finished)
@@ -438,7 +543,9 @@ class GeneralInterface(ScrollArea):
 
     def on_download_finished(self, success, message, model_name):
         self.downloadModelCard.setEnabled(True)
+        self.modelCard.setEnabled(True)
         self.downloadModelCard.setContent("Download and install a new Helsinki-NLP model")
+        self.downloadModelCard.button.setText("Download New Model")
         
         if success:
             InfoBar.success(

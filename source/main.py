@@ -29,12 +29,6 @@ def register_hotkey_copy_wrapper(hotkey, window):
         return app_controller.register_hotkeys()
     return False
 
-def register_hotkey_stop_wrapper(hotkey, window):
-    if app_controller:
-        config_handler.set("hotkey_stop", hotkey)
-        return app_controller.register_hotkeys()
-    return False
-
 def main():
     global app_controller
     logger.info("Initializing application...")
@@ -95,7 +89,6 @@ def main():
             current_config_ref=config_handler.config,
             register_hotkey_translation_func=register_hotkey_translation_wrapper,
             register_hotkey_copy_func=register_hotkey_copy_wrapper,
-            register_hotkey_stop_func=register_hotkey_stop_wrapper,
             save_config_func=config_handler.save_config,
             app_version_ref=APP_VERSION
         )

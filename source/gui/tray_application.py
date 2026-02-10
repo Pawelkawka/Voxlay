@@ -18,7 +18,6 @@ class SystemTrayApp:
 				 current_config_ref,
 				 register_hotkey_translation_func,
 				 register_hotkey_copy_func,
-				 register_hotkey_stop_func,
 				 save_config_func,
 				 app_version_ref=APP_VERSION):
 		self.app = app_instance
@@ -26,7 +25,6 @@ class SystemTrayApp:
 		self.current_config_ref = current_config_ref
 		self.register_hotkey_translation_func = register_hotkey_translation_func
 		self.register_hotkey_copy_func = register_hotkey_copy_func
-		self.register_hotkey_stop_func = register_hotkey_stop_func
 		self.save_config_func = save_config_func
 		self.app_version = app_version_ref
 		
@@ -86,7 +84,10 @@ class SystemTrayApp:
 		msg.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Yes)
 		
 		if msg.exec() == QtWidgets.QMessageBox.StandardButton.Yes:
-			self.update_manager.perform_update(url)
+			self.show_settings_window()
+			self.settings_window.switch_to_updates_tab()
+			if self.settings_window.updatesInterface and hasattr(self.settings_window.updatesInterface, 'start_update'):
+				self.settings_window.updatesInterface.start_update()
 
 	def _on_tray_activated(self, reason):
 		if reason == QtWidgets.QSystemTrayIcon.ActivationReason.DoubleClick:
@@ -115,7 +116,6 @@ class SystemTrayApp:
 			self.settings_window = SettingsWindow(self, self.current_config_ref,
 							  self.register_hotkey_translation_internal,
 							  self.register_hotkey_copy_internal,
-							  self.register_hotkey_stop_internal,
 							  self.save_config_func,
 							  self.app_version)
 		self.settings_window.show()
@@ -136,23 +136,6 @@ class SystemTrayApp:
 			self.current_config_ref["hotkey_copy"] = new_hotkey_str
 			return True
 		except Exception:
-			return False
-
-	def register_hotkey_stop_internal(self, new_hotkey_str):
-		try:
-			self.register_hotkey_stop_func(new_hotkey_str, self.overlay_window)
-			self.current_config_ref["hotkey_stop"] = new_hotkey_str
-			return True
-		except Exception:
-			return False
-			try:
-				self.save_config_func()
-			except Exception:
-				pass
-			return True
-		except (ValueError, KeyError) as e:
-			QtWidgets.QMessageBox.warning(self.overlay_window, "Hotkey Change Error",
-				f"Failed to set shortcut '{new_hotkey_str.upper()}'.\nError: {e}")
 			return False
 
 	def register_hotkey_copy_internal(self, new_hotkey_str):

@@ -84,6 +84,20 @@ if [ "\$1" == "remove" ]; then
     rm -rf "\$INSTALL_DIR"
     rm -f "\$0"
     rm -f "$DESKTOP_DIR/voxlay.desktop"
+    
+    touch "$DESKTOP_DIR"
+    if command -v update-desktop-database &> /dev/null; then
+         update-desktop-database "$DESKTOP_DIR" &> /dev/null || true
+    fi
+    if command -v gtk-update-icon-cache &> /dev/null; then
+        gtk-update-icon-cache -f -t "$HOME/.local/share/icons/" &> /dev/null || true
+    fi
+    if command -v kbuildsycoca6 &> /dev/null; then
+        kbuildsycoca6 &> /dev/null || true
+    elif command -v kbuildsycoca5 &> /dev/null; then
+        kbuildsycoca5 &> /dev/null || true
+    fi
+    
     echo "Voxlay has been removed."
     exit 0
 fi
@@ -112,6 +126,18 @@ Categories=Utility;
 Terminal=false
 StartupWMClass=Voxlay
 EOF
+
+if command -v update-desktop-database &> /dev/null; then
+    update-desktop-database "$DESKTOP_DIR" &> /dev/null || true
+fi
+if command -v gtk-update-icon-cache &> /dev/null; then
+    gtk-update-icon-cache -f -t "$HOME/.local/share/icons/" &> /dev/null || true
+fi
+if command -v kbuildsycoca6 &> /dev/null; then
+    kbuildsycoca6 &> /dev/null || true
+elif command -v kbuildsycoca5 &> /dev/null; then
+    kbuildsycoca5 &> /dev/null || true
+fi
 
 echo "Installation complete!"
 echo "You can run 'voxlay' from your terminal or launch it from the app menu"

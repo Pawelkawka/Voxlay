@@ -203,7 +203,8 @@ def install_model(model_name, output_dir):
         if not output_path.exists():
             output_path.mkdir(parents=True, exist_ok=True)
             
-        target_dir = output_path / model_name.split("/")[-1]
+        safe_name = model_name.replace("/", "_")
+        target_dir = output_path / safe_name
         
         model_source = model_name
         try:
