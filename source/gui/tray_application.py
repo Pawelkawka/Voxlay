@@ -96,7 +96,8 @@ class SystemTrayApp:
 				self.settings_window.updatesInterface.start_update()
 
 	def _on_tray_activated(self, reason):
-		if reason == QtWidgets.QSystemTrayIcon.ActivationReason.DoubleClick:
+		if reason in (QtWidgets.QSystemTrayIcon.ActivationReason.Trigger,
+					  QtWidgets.QSystemTrayIcon.ActivationReason.DoubleClick):
 			self.show_settings_window()
 
 	def change_position(self, position_key):
@@ -132,14 +133,6 @@ class SystemTrayApp:
 		try:
 			self.register_hotkey_translation_func(new_hotkey_str, self.overlay_window)
 			self.current_config_ref["hotkey_translate"] = new_hotkey_str
-			return True
-		except Exception:
-			return False
-
-	def register_hotkey_copy_internal(self, new_hotkey_str):
-		try:
-			self.register_hotkey_copy_func(new_hotkey_str, self.overlay_window)
-			self.current_config_ref["hotkey_copy"] = new_hotkey_str
 			return True
 		except Exception:
 			return False
