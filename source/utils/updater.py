@@ -36,6 +36,7 @@ class UpdateSignals(QtCore.QObject):
     no_update_found = QtCore.pyqtSignal()
     update_error = QtCore.pyqtSignal(str)
     install_progress = QtCore.pyqtSignal(str)
+    restart_required = QtCore.pyqtSignal()
 
 class UpdateManager:
     def __init__(self, current_version):
@@ -120,6 +121,7 @@ class UpdateManager:
             r = requests.get(url, stream=True)
             total_size = int(r.headers.get('content-length', 0))
             downloaded = 0
+            last_percent = -1
             
             with open(zip_path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
@@ -128,8 +130,11 @@ class UpdateManager:
                         downloaded += len(chunk)
                         if total_size > 0:
                             percent = int((downloaded / total_size) * 100)
-                            if percent % 10 == 0:
-                                self.signals.install_progress.emit(f"Downloading: {percent}%")
+                            if percent != last_percent:
+                                self.signals.install_progress.emit(f"Downloading Update: {percent}%")
+                                last_percent = percent
+                        else:
+                             self.signals.install_progress.emit(f"Downloading... {downloaded // 1024} KB")
 
             logger.info("Extracting...")
             self.signals.install_progress.emit("Extracting update...")
@@ -160,7 +165,7 @@ class UpdateManager:
             
             logger.info("Update successful. Restarting...")
             self.signals.install_progress.emit("Restarting application...")
-            self._restart_app(binary_path)
+            self.signals.restart_required.emit()
 
         except Exception as e:
             logger.error(f"Update failed: {e}")
@@ -168,5 +173,3 @@ class UpdateManager:
             if 'backup_path' in locals() and backup_path.exists() and not binary_path.exists():
                 backup_path.rename(binary_path)
 
-    def _restart_app(self, binary_path):
-        os.execv(str(binary_path), [str(binary_path)] + sys.argv[1:])

@@ -3,7 +3,7 @@ import os
 
 APP_NAME = "Voxlay"
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.3.1"
 
 DEFAULT_HOTKEY = 'ctrl+m'
 DEFAULT_COPY_HOTKEY = 'ctrl+shift+c'
