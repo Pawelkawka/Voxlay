@@ -10,6 +10,7 @@ except Exception:
 
 from core.constants import APP_NAME, APP_VERSION, OVERLAY_POSITIONS
 from utils.updater import UpdateManager
+from utils.app_control import restart_application
 
 logger = logging.getLogger("TrayApp")
 
@@ -66,8 +67,13 @@ class SystemTrayApp:
 		self.update_manager = UpdateManager(self.app_version)
 		self.update_manager.signals.update_available.connect(self.on_update_available)
 		self.update_manager.signals.update_error.connect(self.on_update_error)
+		self.update_manager.signals.restart_required.connect(self.on_restart_required)
 		
 		QtCore.QTimer.singleShot(3000, lambda: self.update_manager.check_for_updates(silent=True))
+
+	def on_restart_required(self):
+		logger.info("Restart required signal received.")
+		restart_application()
 
 	def on_update_available(self, version, url):
 		self._show_update_dialog(version, url)
