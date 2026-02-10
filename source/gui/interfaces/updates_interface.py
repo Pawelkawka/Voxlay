@@ -56,6 +56,7 @@ class UpdatesInterface(ScrollArea):
             manager.signals.update_available.connect(self.on_update_available)
             manager.signals.no_update_found.connect(self.on_no_update_found)
             manager.signals.update_error.connect(self.on_update_error)
+            manager.signals.install_progress.connect(self.on_install_progress)
             
             if manager.last_status == "Checking":
                 self.status_label.setText("Checking for updates...")
@@ -89,6 +90,11 @@ class UpdatesInterface(ScrollArea):
 
     def on_update_error(self, error_msg):
         self._handle_update_error(error_msg)
+
+    def on_install_progress(self, status):
+        self.status_label.setText(status)
+        self.check_btn_card.button.setEnabled(False)
+        self.update_btn_card.setVisible(False)
 
     def _handle_update_error(self, error_msg):
         self.status_label.setText(f"Error checking for updates: {error_msg}")

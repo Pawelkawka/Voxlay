@@ -2,11 +2,11 @@
 set -e
 
 APP_NAME="Voxlay"
-REPO="PawelKawka/Voxlay"
 INSTALL_DIR="$HOME/.local/share/$APP_NAME"
 BIN_DIR="$HOME/.local/bin"
 DESKTOP_DIR="$HOME/.local/share/applications"
 ICON_NAME="voxlay.png"
+LOCAL_ZIP="linux.zip"
 
 if [ "$EUID" -eq 0 ]; then
   echo "Please run as a normal user, not root."
@@ -18,35 +18,24 @@ if ! command -v unzip &> /dev/null; then
     exit 1
 fi
 
+if [ ! -f "$LOCAL_ZIP" ]; then
+    echo "Error: $LOCAL_ZIP not found in current directory."
+    echo "Please ensure you have built the project or placed linux.zip here."
+    exit 1
+fi
+
 mkdir -p "$BIN_DIR"
 mkdir -p "$DESKTOP_DIR"
 
-echo "Translator Installer"
-echo "Fetching latest release..."
-
-RELEASE_JSON=$(curl -s "https://api.github.com/repos/$REPO/releases/latest")
-DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep -o 'https://github.com/[^"]*linux.zip' | head -n 1)
-
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo "Error: Could not find linux.zip in latest release."
-    if [ -f "linux.zip" ]; then
-        echo "Using local linux.zip"
-        cp "linux.zip" "/tmp/translator_install.zip"
-    else
-        echo "Aborting."
-        exit 1
-    fi
-else
-    echo "Downloading from $DOWNLOAD_URL..."
-    curl -L -s -o "/tmp/translator_install.zip" "$DOWNLOAD_URL"
-fi
+echo "Offline Installer"
+echo "Using local $LOCAL_ZIP..."
 
 TMP_DIR="/tmp/translator_extract"
 rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR"
 
 echo "Extracting..."
-unzip -q -o "/tmp/translator_install.zip" -d "$TMP_DIR"
+unzip -q -o "$LOCAL_ZIP" -d "$TMP_DIR"
 
 BINARY_PATH=$(find "$TMP_DIR" -type f -name "Voxlay" | head -n 1)
 ICON_PATH=$(find "$TMP_DIR" -type f -name "icon.png" | head -n 1)
@@ -97,7 +86,7 @@ if [ "\$1" == "remove" ]; then
     elif command -v kbuildsycoca5 &> /dev/null; then
         kbuildsycoca5 &> /dev/null || true
     fi
-    
+
     echo "Voxlay has been removed."
     exit 0
 fi

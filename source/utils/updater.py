@@ -15,10 +15,27 @@ GITHUB_API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
 
 logger = logging.getLogger("Updater")
 
+def is_version_newer(current, remote):
+    try:
+        def parse_version(v):
+            return [int(x) for x in v.split('.')]
+        
+        curr_parts = parse_version(current)
+        rem_parts = parse_version(remote)
+        
+        length = max(len(curr_parts), len(rem_parts))
+        curr_parts.extend([0] * (length - len(curr_parts)))
+        rem_parts.extend([0] * (length - len(rem_parts)))
+        
+        return rem_parts > curr_parts
+    except Exception:
+        return remote != current
+
 class UpdateSignals(QtCore.QObject):
     update_available = QtCore.pyqtSignal(str, str)
     no_update_found = QtCore.pyqtSignal()
     update_error = QtCore.pyqtSignal(str)
+    install_progress = QtCore.pyqtSignal(str)
 
 class UpdateManager:
     def __init__(self, current_version):
@@ -56,7 +73,7 @@ class UpdateManager:
             else:
                 remote_ver = tag_name
 
-            if remote_ver != self.current_version:
+            if is_version_newer(self.current_version, remote_ver):
                 logger.info(f"New version found: {remote_ver} (Current: {self.current_version})")
                 self.latest_version = tag_name
                 self.last_status = "Available"
@@ -83,6 +100,7 @@ class UpdateManager:
 
     def _download_and_install(self, url):
         try:
+            self.signals.install_progress.emit("Starting download...")
             if getattr(sys, 'frozen', False):
                 binary_path = Path(sys.executable)
                 app_dir = binary_path.parent
@@ -97,21 +115,35 @@ class UpdateManager:
             extract_dir.mkdir()
 
             logger.info(f"Downloading update from {url}...")
+            self.signals.install_progress.emit("Downloading update package...")
+            
             r = requests.get(url, stream=True)
+            total_size = int(r.headers.get('content-length', 0))
+            downloaded = 0
+            
             with open(zip_path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total_size > 0:
+                            percent = int((downloaded / total_size) * 100)
+                            if percent % 10 == 0:
+                                self.signals.install_progress.emit(f"Downloading: {percent}%")
 
             logger.info("Extracting...")
+            self.signals.install_progress.emit("Extracting update...")
             with zipfile.ZipFile(zip_path, 'r') as zf:
                 zf.extractall(extract_dir)
 
             new_binary = next(extract_dir.rglob("Voxlay"), None)
             if not new_binary:
                 logger.error("New binary not found in update.")
+                self.signals.update_error.emit("Update failed: Binary not found in package.")
                 return
 
             logger.info("Replacing binary...")
+            self.signals.install_progress.emit("Installing...")
             backup_path = binary_path.with_suffix(".old")
             
             if backup_path.exists():
@@ -127,10 +159,12 @@ class UpdateManager:
             shutil.rmtree(extract_dir)
             
             logger.info("Update successful. Restarting...")
+            self.signals.install_progress.emit("Restarting application...")
             self._restart_app(binary_path)
 
         except Exception as e:
             logger.error(f"Update failed: {e}")
+            self.signals.update_error.emit(f"Update failed: {str(e)}")
             if 'backup_path' in locals() and backup_path.exists() and not binary_path.exists():
                 backup_path.rename(binary_path)
 

@@ -3,7 +3,7 @@ import os
 
 APP_NAME = "Voxlay"
 
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 
 DEFAULT_HOTKEY = 'ctrl+m'
 DEFAULT_COPY_HOTKEY = 'ctrl+shift+c'
@@ -85,7 +85,6 @@ DEFAULT_CTRANSLATE2_COMPUTE_TYPE = "int8"
 DEFAULT_CONFIG_STRUCT = {
     "hotkey_translate": DEFAULT_HOTKEY,
     "hotkey_copy": DEFAULT_COPY_HOTKEY,
-    "hotkey_stop": "ctrl+shift+s",
     "overlay_position": DEFAULT_OVERLAY_POSITION,
     "target_language": DEFAULT_TARGET_LANGUAGE,
     "recognizer_engine": DEFAULT_RECOGNIZER_ENGINE,

@@ -7,18 +7,18 @@ from .interfaces.appearance_interface import AppearanceInterface
 from .interfaces.behavior_interface import BehaviorInterface
 from .interfaces.updates_interface import UpdatesInterface
 from core.constants import DEFAULT_CONFIG_STRUCT
+from core.config_handler import config_handler
 from utils.app_control import restart_application
 
 class SettingsWindow(QtWidgets.QMainWindow):
     def __init__(self, tray_app, current_config_ref,
-                 register_hotkey_translation_func, register_hotkey_copy_func, register_hotkey_stop_func,
+                 register_hotkey_translation_func, register_hotkey_copy_func,
                  save_config_func, app_version_ref):
         super().__init__()
         self.tray_app = tray_app
         self.current_config_ref = current_config_ref
         self.register_hotkey_translation_func = register_hotkey_translation_func
         self.register_hotkey_copy_func = register_hotkey_copy_func
-        self.register_hotkey_stop_func = register_hotkey_stop_func
         self.save_config_func = save_config_func
         self.app_version = app_version_ref
         
@@ -35,7 +35,7 @@ class SettingsWindow(QtWidgets.QMainWindow):
         self.layout.addWidget(self.tab_widget)
         
         self.generalInterface = GeneralInterface(self, self.current_config_ref, self.save_config_func)
-        self.hotkeysInterface = HotkeysInterface(self, self.current_config_ref, self.register_hotkey_translation_func, self.register_hotkey_copy_func, self.register_hotkey_stop_func)
+        self.hotkeysInterface = HotkeysInterface(self, self.current_config_ref, self.register_hotkey_translation_func, self.register_hotkey_copy_func)
         self.appearanceInterface = AppearanceInterface(self, self.current_config_ref, self.tray_app)
         self.behaviorInterface = BehaviorInterface(self, self.current_config_ref, self.save_config_func)
         self.updatesInterface = UpdatesInterface(self, self.tray_app, self.app_version)
@@ -58,6 +58,9 @@ class SettingsWindow(QtWidgets.QMainWindow):
         self.tab_widget.addTab(self.behaviorInterface, 'Behavior')
         self.tab_widget.addTab(self.updatesInterface, 'Updates')
 
+    def switch_to_updates_tab(self):
+        self.tab_widget.setCurrentWidget(self.updatesInterface)
+
     def reset_to_defaults(self):
         reply = QtWidgets.QMessageBox.question(
             self,
@@ -67,15 +70,10 @@ class SettingsWindow(QtWidgets.QMainWindow):
         )
         
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
-            defaults = deepcopy(DEFAULT_CONFIG_STRUCT)
-            
             try:
-                self.current_config_ref.clear()
-                self.current_config_ref.update(defaults)
+                if config_handler.config_file_path and config_handler.config_file_path.exists():
+                    config_handler.config_file_path.unlink()
                 
-                if self.save_config_func:
-                    self.save_config_func()
-
                 restart_application()
 
             except Exception as e:

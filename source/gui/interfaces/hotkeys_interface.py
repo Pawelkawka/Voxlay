@@ -9,12 +9,11 @@ import logging
 logger = logging.getLogger("GUI.Hotkeys")
 
 class HotkeysInterface(ScrollArea):
-    def __init__(self, parent=None, config=None, register_trans_func=None, register_copy_func=None, register_stop_func=None):
+    def __init__(self, parent=None, config=None, register_trans_func=None, register_copy_func=None):
         super().__init__(parent)
         self.config = config
         self.register_trans_func = register_trans_func
         self.register_copy_func = register_copy_func
-        self.register_stop_func = register_stop_func
         logger.info("Initializing Hotkeys interface")
         
         self.view = QtWidgets.QWidget(self)
@@ -58,17 +57,6 @@ class HotkeysInterface(ScrollArea):
         )
         self.copyHotkeyCard.keySequenceChanged.connect(self.on_copy_hotkey_changed)
         hotkeyGroup.addSettingCard(self.copyHotkeyCard)
-        
-        self.stop_config_item = BridgeConfigItem(self.config.get("hotkey_stop", "ctrl+shift+s"), [])
-        self.stopHotkeyCard = KeySequenceCard(
-            self.stop_config_item,
-            FIF.MICROPHONE,
-            "Manual Control Hotkey",
-            "Start/Stop recording in Manual Mode",
-            hotkeyGroup
-        )
-        self.stopHotkeyCard.keySequenceChanged.connect(self.on_stop_hotkey_changed)
-        hotkeyGroup.addSettingCard(self.stopHotkeyCard)
         
         layout.addWidget(hotkeyGroup)
         layout.addStretch(1)
@@ -128,36 +116,6 @@ class HotkeysInterface(ScrollArea):
                 logger.error(f"Failed to register copy hotkey: {new_hotkey}")
                 self.copy_config_item.value = old_hotkey
                 self.copyHotkeyCard.setValue(old_hotkey)
-
-    def on_stop_hotkey_changed(self, new_hotkey):
-        old_hotkey = self.config.get("hotkey_stop", "ctrl+shift+s")
-        logger.info(f"Changing stop hotkey from '{old_hotkey}' to '{new_hotkey}'")
-        if new_hotkey == old_hotkey:
-            return
-
-        current_trans_hotkey = self.config.get("hotkey_translate", "ctrl+m")
-        current_copy_hotkey = self.config.get("hotkey_copy", "ctrl+shift+c")
-        
-        if new_hotkey == current_trans_hotkey or new_hotkey == current_copy_hotkey:
-            logger.warning(f"Stop hotkey '{new_hotkey}' conflicts with other hotkeys")
-            MessageBox(
-                "Duplicate Hotkey",
-                f"The hotkey '{new_hotkey}' is already used.\n"
-                "Each function must have a unique keyboard shortcut.",
-                parent=self.window()
-            ).exec()
-            self.stop_config_item.value = old_hotkey
-            self.stopHotkeyCard.setValue(old_hotkey)
-            return
-        
-        if self.register_stop_func:
-            if self.register_stop_func(new_hotkey):
-                logger.info(f"Stop hotkey successfully registered: {new_hotkey}")
-                self.config["hotkey_stop"] = new_hotkey
-            else:
-                logger.error(f"Failed to register stop hotkey: {new_hotkey}")
-                self.stop_config_item.value = old_hotkey
-                self.stopHotkeyCard.setValue(old_hotkey)
 
     def update_ui(self):
         self.trans_config_item.value = self.config.get("hotkey_translate", "ctrl+m")
