@@ -38,8 +38,19 @@ voxlay remove
 
 - **Speech Recognition**: `SpeechRecognition` library.
 - **Translation**: 
-  - **CTranslate2**: (Default) Fast inference engine for Transformer models (supports OPUS-MT models). Runs completely offline.
-  - **LibreTranslate**: (Beta) Support for LibreTranslate API. Useful for self-hosted instances.
+  - **CTranslate2**: Fast inference engine for Transformer models (supports OPUS-MT models). Runs completely offline.
+  - **LibreTranslate**: Open source, self hostable translation API.
+
+### Supported Languages
+- **LibreTranslate**: Supports following languages: English (`en`), Polish (`pl`), German (`de`), Spanish (`es`), Italian (`it`), Russian (`ru`), Dutch (`nl`), Czech (`cs`), Portuguese (`pt`).
+- **CTranslate2**: Support depends on the availability of the model for a specific language pair.
+
+### LibreTranslate Setup (Docker)
+Docker must be installed on your system. To start a LibreTranslate instance, run:
+```bash
+docker run -d --name libretranslate -p 5000:5000 -e LT_LOAD_ONLY=lang,lang libretranslate/libretranslate
+```
+Note: Using the `LT_LOAD_ONLY` environment variable to specify only the languages you need (e.g. `en,pl`) is highly recommended to save RAM.
 
 ---
 

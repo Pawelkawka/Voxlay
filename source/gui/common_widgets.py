@@ -170,7 +170,8 @@ class InfoBar:
     @staticmethod
     def success(title, content, duration=2000, parent=None, position=None, **kwargs):
         print(f"[SUCCESS] {title}: {content}")
-        pass
+        if parent:
+            QMessageBox.information(parent, title, content)
 
     @staticmethod
     def error(title, content, duration=2000, parent=None, position=None, **kwargs):
