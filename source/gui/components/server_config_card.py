@@ -2,10 +2,13 @@ from PyQt6 import QtWidgets, QtCore
 from ..common_widgets import SettingCard, PrimaryPushButton, LineEdit, FluentIcon, InfoBar, InfoBarPosition
 import requests
 import logging
+import threading
 
 logger = logging.getLogger("GUI.ServerConfig")
 
 class ServerConfigCard(SettingCard):
+    test_finished = QtCore.pyqtSignal(bool, str)
+
     def __init__(self, config, save_func=None, parent=None):
         super().__init__(FluentIcon.LINK, "LibreTranslate Server", "Configure local translation server URL", parent)
         self.config = config
@@ -48,53 +51,84 @@ class ServerConfigCard(SettingCard):
             
         self.testBtn.setEnabled(False)
         self.testBtn.setText("Testing...")
-        QtWidgets.QApplication.processEvents()
+        self.test_finished.connect(self._on_test_finished, QtCore.Qt.ConnectionType.UniqueConnection)
         
-        try:
-            payload = {
-                "q": "test",
-                "source": "auto",
-                "target": "en"
-            }
-            headers = {
-                "Content-Type": "application/json"
-            }
-            logger.debug(f"Sending test request to: {url}")
-            response = requests.post(url, json=payload, headers=headers, timeout=3)
-            
-            if response.status_code == 200:
-                logger.info(f"Connection test successful! Server responded with status 200")
-                self._show_message("Success", "Connection established successfully!", False)
-            elif response.status_code == 400:
-                base_url = self.urlEdit.text().strip()
-                logger.debug(f"Status 400, trying base URL: {base_url}")
-                response = requests.post(base_url, json=payload, headers=headers, timeout=3)
-                if response.status_code == 200:
-                    logger.info(f"Connection test successful with base URL! Status 200")
-                    self._show_message("Success", "Connection established successfully!", False)
-                    self.urlEdit.setText(base_url)
-                    self.config["libretranslate_url"] = base_url
-                else:
-                    logger.error(f"Connection test failed! Server returned status {response.status_code}")
-                    self._show_message("Failed", f"Invalid request format (400). Check server configuration.", True)
-            else:
-                logger.error(f"Connection test failed! Server returned status {response.status_code}")
-                self._show_message("Failed", f"Server returned status: {response.status_code}", True)
+        def run_test():
+            try:
+                from core.constants import DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, TARGET_LANGUAGES
                 
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"Connection error: Could not connect to server at {url}")
-            self._show_message("Connection Error", "Could not connect to server. Is it running?", True)
-        except requests.exceptions.Timeout:
-            logger.error(f"Connection timeout: Server did not respond in time (3s timeout)")
-            self._show_message("Timeout", "Server did not respond in time. Check if LibreTranslate is running.", True)
-        except Exception as e:
-            logger.error(f"Connection test exception: {str(e)}")
-            self._show_message("Error", f"Connection failed: {str(e)}", True)
-        finally:
-            self.testBtn.setEnabled(True)
-            self.testBtn.setText("Test Connection")
+                src_full = self.config.get("source_language", DEFAULT_SOURCE_LANGUAGE)
+                src = src_full.split("-")[0].lower()
+                tgt = self.config.get("target_language", DEFAULT_TARGET_LANGUAGE).lower()
+                test_src, test_tgt = src, tgt
+                
+                if test_src == test_tgt:
+                    available = list(TARGET_LANGUAGES.keys())
+                    if len(available) >= 2:
+                        test_src, test_tgt = available[0], available[1]
+                    else:
+                        test_src, test_tgt = "en", "pl"
+
+                payload = {
+                    "q": "Test",
+                    "source": test_src,
+                    "target": test_tgt,
+                    "format": "text"
+                }
+                headers = {
+                    "Content-Type": "application/json"
+                }
+                logger.debug(f"Sending test request to: {url} using {test_src}->{test_tgt}")
+                
+                try:
+                    response = requests.post(url, json=payload, headers=headers, timeout=5)
+                    if response.status_code == 200:
+                        logger.info(f"Connection test successful! Server responded with status 200")
+                        self.test_finished.emit(True, "Connection established successfully!")
+                        return
+                except Exception:
+                    pass
+
+                base_url = url.replace('/translate', '')
+                if not base_url: base_url = url
+                
+                logger.debug(f"Translate failed, trying /languages at: {base_url}/languages")
+                try:
+                    resp_langs = requests.get(f"{base_url.rstrip('/')}/languages", timeout=3)
+                    if resp_langs.status_code == 200:
+                        logger.info(f"Connection test successful via /languages!")
+                        self.test_finished.emit(True, "Server is alive (detected via /languages).")
+                        return
+                except Exception:
+                    pass
+
+                self.test_finished.emit(False, "Could not connect to server. Check URL and Docker status.")
+
+            except Exception as e:
+                logger.error(f"Connection test error: {str(e)}")
+                self.test_finished.emit(False, f"Error: {str(e)}")
+
+        threading.Thread(target=run_test, daemon=True).start()
+
+    @QtCore.pyqtSlot(bool, str)
+    def _on_test_finished(self, success, message):
+        try:
+            self.test_finished.disconnect(self._on_test_finished)
+        except Exception:
+            pass
+        
+        self.testBtn.setText("Wait...")
+        self._show_message("Success" if success else "Failed", message, not success)
+        
+        QtCore.QTimer.singleShot(2000, self._enable_test_button)
+
+    def _enable_test_button(self):
+        self.testBtn.setEnabled(True)
+        self.testBtn.setText("Test Connection")
 
     def _show_message(self, title, content, is_error):
+        parent_widget = self.window() or self
+        
         if is_error:
             InfoBar.error(
                 title=title,
@@ -102,8 +136,8 @@ class ServerConfigCard(SettingCard):
                 orient=QtCore.Qt.Orientation.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP_RIGHT,
-                duration=3000,
-                parent=self.window()
+                duration=3500,
+                parent=parent_widget
             )
         else:
             InfoBar.success(
@@ -112,8 +146,8 @@ class ServerConfigCard(SettingCard):
                 orient=QtCore.Qt.Orientation.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP_RIGHT,
-                duration=3000,
-                parent=self.window()
+                duration=3500,
+                parent=parent_widget
             )
             
     def setValue(self, value):

@@ -3,7 +3,7 @@ import os
 
 APP_NAME = "Voxlay"
 
-APP_VERSION = "0.3.1.1"
+APP_VERSION = "0.3.2"
 
 DEFAULT_HOTKEY = 'ctrl+m'
 DEFAULT_COPY_HOTKEY = 'ctrl+shift+c'
@@ -74,8 +74,8 @@ SOURCE_LANGUAGES = {
 }
 
 TRANSLATOR_ENGINES = {
-    "libretranslate_local": "LibreTranslate (Local) [BETA - Experimental]",
-    "ctranslate2": "CTranslate2 (Helsinki-NLP)"
+    "libretranslate_local": "LibreTranslate",
+    "ctranslate2": "CTranslate2"
 }
 
 DEFAULT_CTRANSLATE2_MODEL_DIR = os.path.join(os.path.expanduser("~"), ".config", "Voxlay", "models")
