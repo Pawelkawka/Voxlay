@@ -38,7 +38,7 @@ voxlay remove
 
 - **Speech Recognition**: `SpeechRecognition` library.
 - **Translation**: 
-  - **CTranslate2**: Fast inference engine for Transformer models (supports OPUS-MT models). Runs completely offline.
+  - **CTranslate2**: Fast inference models.
   - **LibreTranslate**: Open source, self hostable translation API.
 
 ### Supported Languages
